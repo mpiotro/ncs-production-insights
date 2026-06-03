@@ -216,3 +216,18 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- NCS Production Insights ---
+
+# DuckDB (single embedded file; one per git worktree)
+*.duckdb
+*.duckdb.wal
+*.duckdb.tmp/
+
+# Frontend (React + Vite + TypeScript)
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+.DS_Store
