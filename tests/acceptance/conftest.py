@@ -27,6 +27,15 @@ to populate the store with controlled series (no SODIR CSV, no network) before d
 ``run_forecasts(con)`` — matching plan.md §Input source ("seed the store (insert ``MonthlyProduction``
 rows ...), then forecast"). ``ncs.persist`` is imported lazily inside the fixture so this addendum
 does not change the collection behaviour of the 001 suites.
+
+003 addendum (additive — 001/002 fixtures above are untouched)
+--------------------------------------------------------------
+The 003 API acceptance suites need a *seeded store + ``TestClient``* seam, which lives in a separate
+module ``conftest_api.py`` (the seeded-field constants, the ``seeded_db`` / ``client`` fixtures). It
+is registered as a pytest plugin via the ``pytest_plugins`` line at the bottom of this file so those
+fixtures are visible to the API suites **without** editing any 001/002 fixture above. Keeping the
+003 machinery in its own module (rather than inlined here) means a failure to import ``ncs.api`` /
+``fastapi`` only affects the API suites that request its fixtures, not the 001/002 collection.
 """
 
 from __future__ import annotations
@@ -171,3 +180,11 @@ def seed_monthly_production() -> SeedMonthlyProduction:
         persist_data(con, list(rows), [])
 
     return _seed
+
+
+# ============================================================ 003 addendum (additive) =============
+# Register the 003 API acceptance fixtures (seeded store + TestClient seam) as a pytest plugin. The
+# fixtures themselves live in ``conftest_api.py`` so a missing ``ncs.api`` / ``fastapi`` import (the
+# intended TDD red until 003-T1/T7..T9) only fails the API suites, never 001/002 collection. This is
+# the single additive line wiring the 003 fixtures in — no 001/002 fixture above is altered.
+pytest_plugins = ["conftest_api"]
