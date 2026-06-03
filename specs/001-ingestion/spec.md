@@ -30,7 +30,7 @@ blocks all downstream phases.
 - **001-R2** — WHEN an ingestion run executes, the system SHALL retrieve the field-outline geometry for
   NCS fields from SODIR open data.
 - **001-R3** — IF the primary SODIR source for a dataset is unavailable or errors, THEN the system SHALL
-  obtain that dataset from the alternate published SODIR source (REST ⇄ CSV) before reporting failure.
+  obtain that dataset from an alternate published SODIR source or machine format before reporting failure.
 - **001-R4** — WHEN a production record is ingested, the system SHALL normalize it into a typed
   `MonthlyProduction` model uniquely keyed by (field NPDID, year, month).
 - **001-R5** — WHEN a field is ingested, the system SHALL normalize it into a typed `Field` model keyed by
