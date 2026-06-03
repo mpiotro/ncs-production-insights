@@ -1,0 +1,50 @@
+[project]
+name = "ncs-production-insights"
+version = "0.1.0"
+description = "NCS Production Insights — SODIR ingestion, decline forecasting, and dashboard, built spec-first from open data."
+readme = "README.md"
+requires-python = ">=3.12"
+# Runtime deps scoped to phase 001 (ingestion) — exactly the libraries named in
+# specs/001-ingestion/plan.md §"Library choices" + the constitution's tech-standards.
+# Downstream stacks (FastAPI in 003, frontend tooling in 004) are intentionally NOT here.
+dependencies = [
+    "pydantic>=2",   # frozen typed contract (Pydantic v2)            — contracts.md
+    "duckdb",        # single embedded store + read_csv_auto bulk path — plan.md §Persistence
+    "httpx",         # sync HTTP transport (timeouts/retries)          — plan.md §Sourcing
+    "polars",        # light tabular reshaping/validation before Pydantic
+    "shapely",       # WKT polygon/multipolygon validity check (R7)
+]
+
+[dependency-groups]
+# Dev-only tooling — installed by `uv sync`, excluded from the published package.
+dev = [
+    "pytest",
+    "pytest-cov",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# src-layout: the importable package lives at src/ncs/ so `from ncs... import ...`
+# works after `uv sync`. Point hatchling at it explicitly.
+[tool.hatch.build.targets.wheel]
+packages = ["src/ncs"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=ncs --cov-report=term-missing --cov-fail-under=0"
+
+[tool.coverage.run]
+source = ["ncs"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+# Coverage baseline (principle 9 ratchet). Set to 0 at scaffold ON PURPOSE:
+# the TDD build order (tasks.md §Approach) lands acceptance tests (T2–T6) and the
+# implementation modules (T7–T11) incrementally BEFORE the pipeline is wired end-to-end
+# at T12. A non-zero gate here would red-light those intermediate commits, where new
+# src/ncs/*.py files exist but aren't yet fully exercised. The real ingestion coverage
+# baseline is measured and ratcheted up at task 001-T12 — this number only moves up.
+fail_under = 0
