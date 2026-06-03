@@ -16,11 +16,22 @@ the developer implements the seam at 001-T7/T8.
 
 Hermetic by construction (tasks.md §Resolved): the source seam reads local files only — no
 live SODIR network call is ever made from the acceptance suite.
+
+002 addendum (additive — 001's fixtures above are untouched)
+------------------------------------------------------------
+The 002 forecasting persistence suite (``test_forecast_persistence.py``, R8) reuses the same
+``con`` fixture and adds one fixture, ``seed_monthly_production`` — a helper that writes a list of
+synthetic ``MonthlyProduction`` rows into the store's ``monthly_production`` table via the **frozen
+001** persistence seam (``ncs.persist.create_schema`` + ``persist_data``). That is the hermetic way
+to populate the store with controlled series (no SODIR CSV, no network) before driving
+``run_forecasts(con)`` — matching plan.md §Input source ("seed the store (insert ``MonthlyProduction``
+rows ...), then forecast"). ``ncs.persist`` is imported lazily inside the fixture so this addendum
+does not change the collection behaviour of the 001 suites.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import duckdb
@@ -126,3 +137,37 @@ def settings_factory() -> SettingsFactory:
 def good_settings(settings_factory: SettingsFactory) -> object:
     """``Settings`` with both datasets' primary sources valid (the happy path for R1/R2)."""
     return settings_factory()
+
+
+# ============================================================ 002 addendum (additive) =============
+# Seeding helper for the 002 forecasting persistence suite (R8). Writes synthetic
+# ``MonthlyProduction`` rows into ``monthly_production`` via the frozen 001 persistence seam, so the
+# store is populated hermetically (no SODIR CSV / network) before ``run_forecasts(con)`` reads it.
+
+SeedMonthlyProduction = Callable[[duckdb.DuckDBPyConnection, Sequence[object]], None]
+
+
+@pytest.fixture
+def seed_monthly_production() -> SeedMonthlyProduction:
+    """Return a helper that writes ``MonthlyProduction`` rows into the store (frozen 001 seam).
+
+    Usage in the 002 persistence suite::
+
+        seed_monthly_production(con, all_rows(clean_decline(1), short_history(2)))
+        run = run_forecasts(con)
+
+    It calls the **frozen 001** ``ncs.persist.create_schema`` (creates ``monthly_production`` etc.)
+    then ``persist_data(con, rows, fields=[])`` to upsert the production rows — exactly how 001 lands
+    those models, so the table 002 reads from is byte-identical to a real ingest's. No ``Field`` rows
+    are needed: the forecaster keys on ``field_npdid`` from ``monthly_production`` alone (plan.md
+    §Input source; ``field_name`` is off the forecast contract). ``ncs.persist`` is imported lazily so
+    this fixture does not alter the 001 suites' collection behaviour.
+    """
+
+    def _seed(con: duckdb.DuckDBPyConnection, rows: Sequence[object]) -> None:
+        from ncs.persist import create_schema, persist_data
+
+        create_schema(con)
+        persist_data(con, list(rows), [])
+
+    return _seed
