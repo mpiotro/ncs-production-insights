@@ -21,6 +21,7 @@ Tasks, tests, and commits cite the EARS requirement IDs they satisfy (principle 
 ### 001 — ingestion · *sequential; blocks everything*
 Build the ingestion layer (SODIR REST client + CSV fallback + normalization) and **FREEZE the data
 contract**: typed Pydantic v2 models for monthly production per field and for field geometry.
+**Sources (SODIR, NLOD 2.0):** REST JSON `https://factmaps.sodir.no/api/rest/services/DataService`; CSV `https://factpages.sodir.no/downloads/csv/` (CSVs carry WKT geometry).
 **Depends on:** nothing. **Unblocks:** 002, 003, 004.
 
 ### 002 — analytics · *depends on 001*
