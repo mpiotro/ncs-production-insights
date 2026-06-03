@@ -17,6 +17,12 @@ dependencies = [
     # materialize a TIMESTAMPTZ column into a tz-aware datetime on read. Transitive to duckdb, pinned
     # explicitly here because the store uses TIMESTAMPTZ for ingestion_report.retrieved_at (R9).
     "pytz>=2026.2",
+    # Phase 002 (forecasting) — exactly the libraries named in specs/002-analytics/plan.md
+    # §"Libraries to add". numpy for series/MAPE math, scipy for the Arps non-linear least-squares
+    # fit, statsmodels for the Holt damped-trend baseline (it pulls pandas transitively).
+    "numpy>=2.4.6",
+    "scipy>=1.17.1",
+    "statsmodels>=0.14.6",
 ]
 
 [dependency-groups]
@@ -37,10 +43,11 @@ packages = ["src/ncs"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# Coverage ratchet (principle 9): baseline recorded at 001-T12 once the pipeline went green
-# end-to-end. Measured total was 95%; the gate is set a few points below (92) for headroom so a
-# trivial branch fluctuation doesn't red-light CI. The ratchet only ever moves UP from here.
-addopts = "--cov=ncs --cov-report=term-missing --cov-fail-under=92"
+# Coverage ratchet (principle 9): baseline recorded at 001-T12 (measured 95%, gate 92). Ratcheted UP
+# at 002-T12 once the forecasting pipeline (series → backtest/select → forecast → persist) landed
+# green over the combined 001+002 code: measured total 96.7%, so the gate moves to 94 — still a couple
+# of points below for headroom against trivial branch fluctuation. The ratchet only ever moves UP.
+addopts = "--cov=ncs --cov-report=term-missing --cov-fail-under=94"
 
 [tool.coverage.run]
 source = ["ncs"]
@@ -48,9 +55,10 @@ branch = true
 
 [tool.coverage.report]
 show_missing = true
-# Coverage baseline (principle 9 ratchet). Recorded at 001-T12 once the fetch → normalize → link →
-# persist → report pipeline went green end-to-end (the full acceptance suite + developer unit tests).
-# Measured total was 95%; the gate sits a couple of points below at 92 for headroom against trivial
-# branch fluctuation. This number only ever moves UP — a deliberate reduction needs a coordinator
-# COVERAGE-WAIVER (tech-standards). Kept in sync with --cov-fail-under in [tool.pytest.ini_options].
-fail_under = 92
+# Coverage baseline (principle 9 ratchet). First recorded at 001-T12 (fetch → normalize → link →
+# persist → report; measured 95%, gate 92). Ratcheted UP at 002-T12 once the forecasting pipeline
+# (series → backtest/select → forecast → persist) went green over the combined 001+002 code: measured
+# total 96.7%, gate raised to 94 with headroom against trivial branch fluctuation. This number only
+# ever moves UP — a deliberate reduction needs a coordinator COVERAGE-WAIVER (tech-standards). Kept in
+# sync with --cov-fail-under in [tool.pytest.ini_options].
+fail_under = 94
