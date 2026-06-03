@@ -1,0 +1,27 @@
+name: CI
+
+# CONTRIBUTING.md §CI: GitHub Actions runs pytest + pytest-cov on every PR and
+# enforces the coverage ratchet (principle 9). The code is cross-platform; only the
+# dev shell is Windows, so CI runs on Linux.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run tests with coverage gate
+        run: uv run pytest
