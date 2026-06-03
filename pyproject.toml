@@ -13,6 +13,10 @@ dependencies = [
     "httpx",         # sync HTTP transport (timeouts/retries)          — plan.md §Sourcing
     "polars",        # light tabular reshaping/validation before Pydantic
     "shapely",       # WKT polygon/multipolygon validity check (R7)
+    # pytz is a DuckDB *runtime* requirement, not imported by any ncs source: DuckDB needs it to
+    # materialize a TIMESTAMPTZ column into a tz-aware datetime on read. Transitive to duckdb, pinned
+    # explicitly here because the store uses TIMESTAMPTZ for ingestion_report.retrieved_at (R9).
+    "pytz>=2026.2",
 ]
 
 [dependency-groups]
@@ -33,7 +37,10 @@ packages = ["src/ncs"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=ncs --cov-report=term-missing --cov-fail-under=0"
+# Coverage ratchet (principle 9): baseline recorded at 001-T12 once the pipeline went green
+# end-to-end. Measured total was 95%; the gate is set a few points below (92) for headroom so a
+# trivial branch fluctuation doesn't red-light CI. The ratchet only ever moves UP from here.
+addopts = "--cov=ncs --cov-report=term-missing --cov-fail-under=92"
 
 [tool.coverage.run]
 source = ["ncs"]
@@ -41,10 +48,9 @@ branch = true
 
 [tool.coverage.report]
 show_missing = true
-# Coverage baseline (principle 9 ratchet). Set to 0 at scaffold ON PURPOSE:
-# the TDD build order (tasks.md §Approach) lands acceptance tests (T2–T6) and the
-# implementation modules (T7–T11) incrementally BEFORE the pipeline is wired end-to-end
-# at T12. A non-zero gate here would red-light those intermediate commits, where new
-# src/ncs/*.py files exist but aren't yet fully exercised. The real ingestion coverage
-# baseline is measured and ratcheted up at task 001-T12 — this number only moves up.
-fail_under = 0
+# Coverage baseline (principle 9 ratchet). Recorded at 001-T12 once the fetch → normalize → link →
+# persist → report pipeline went green end-to-end (the full acceptance suite + developer unit tests).
+# Measured total was 95%; the gate sits a couple of points below at 92 for headroom against trivial
+# branch fluctuation. This number only ever moves UP — a deliberate reduction needs a coordinator
+# COVERAGE-WAIVER (tech-standards). Kept in sync with --cov-fail-under in [tool.pytest.ini_options].
+fail_under = 92
