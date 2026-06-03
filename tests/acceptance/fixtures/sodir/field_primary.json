@@ -1,0 +1,55 @@
+{
+  "displayFieldName": "fldName",
+  "geometryType": "esriGeometryPolygon",
+  "spatialReference": { "wkid": 4326 },
+  "features": [
+    {
+      "attributes": {
+        "fldNpdidField": 1001,
+        "fldName": "ALPHA",
+        "fldCurrentActivitySatus": "Producing",
+        "fldHcType": "OIL",
+        "fldMainArea": "North sea",
+        "cmpLongName": "Alpha Operator AS",
+        "fldDiscoveryYear": 1979,
+        "geometry_wkt": "POLYGON ((2.0 60.0, 2.5 60.0, 2.5 60.5, 2.0 60.5, 2.0 60.0))"
+      }
+    },
+    {
+      "attributes": {
+        "fldNpdidField": 1002,
+        "fldName": "BETA",
+        "fldCurrentActivitySatus": "Producing",
+        "fldHcType": "GAS/CONDENSATE",
+        "fldMainArea": "Norwegian sea",
+        "cmpLongName": "Beta Operator ASA",
+        "fldDiscoveryYear": 1985,
+        "geometry_wkt": "MULTIPOLYGON (((6.0 65.0, 6.4 65.0, 6.4 65.4, 6.0 65.4, 6.0 65.0)), ((7.0 66.0, 7.2 66.0, 7.2 66.2, 7.0 66.2, 7.0 66.0)))"
+      }
+    },
+    {
+      "attributes": {
+        "fldNpdidField": 1003,
+        "fldName": "GAMMA",
+        "fldCurrentActivitySatus": "Shut down",
+        "fldHcType": "OIL",
+        "fldMainArea": "Barents sea",
+        "cmpLongName": "Gamma Operator AS",
+        "fldDiscoveryYear": 1990,
+        "geometry_wkt": null
+      }
+    },
+    {
+      "attributes": {
+        "fldNpdidField": 1004,
+        "fldName": "DELTA",
+        "fldCurrentActivitySatus": "Approved for production",
+        "fldHcType": "OIL/GAS",
+        "fldMainArea": "North sea",
+        "cmpLongName": "Delta Operator AS",
+        "fldDiscoveryYear": 2001,
+        "geometry_wkt": "POLYGON ((3.0 59.0, 3.3 59.0, 3.3 59.3, 3.0 59.3, 3.0 59.0))"
+      }
+    }
+  ]
+}

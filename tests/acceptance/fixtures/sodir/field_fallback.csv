@@ -1,0 +1,5 @@
+fldNpdidField,fldName,fldCurrentActivitySatus,fldHcType,fldMainArea,cmpLongName,fldDiscoveryYear,geometry_wkt
+1001,ALPHA,Producing,OIL,North sea,Alpha Operator AS,1979,"POLYGON ((2.0 60.0, 2.5 60.0, 2.5 60.5, 2.0 60.5, 2.0 60.0))"
+1002,BETA,Producing,GAS/CONDENSATE,Norwegian sea,Beta Operator ASA,1985,"MULTIPOLYGON (((6.0 65.0, 6.4 65.0, 6.4 65.4, 6.0 65.4, 6.0 65.0)), ((7.0 66.0, 7.2 66.0, 7.2 66.2, 7.0 66.2, 7.0 66.0)))"
+1003,GAMMA,Shut down,OIL,Barents sea,Gamma Operator AS,1990,
+1004,DELTA,Approved for production,OIL/GAS,North sea,Delta Operator AS,2001,"POLYGON ((3.0 59.0, 3.3 59.0, 3.3 59.3, 3.0 59.3, 3.0 59.0))"
