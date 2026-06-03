@@ -1,0 +1,16 @@
+# CODEOWNERS — review gates for the frozen data contract and binding governance.
+#
+# These take effect once `main` has branch protection with "Require review from
+# Code Owners" enabled (a repo Settings → Branches toggle — see CONTRIBUTING.md
+# §"Freezing the contract"). Until then this file documents ownership.
+#
+# Principle 3: the data contract is frozen before any downstream component begins.
+# Changing the frozen contract is a deliberate amendment (version it, re-tag, and
+# re-validate every downstream phase), never a casual edit.
+
+# The FROZEN 001 data contract — the Pydantic v2 seam that 002 / 003 / 004 consume
+# read-only (tagged `001-contract-frozen`).
+/specs/001-ingestion/contracts.md   @mpiotro
+
+# The binding project constitution (mission · principles · tech-standards).
+/specs/constitution/                @mpiotro
