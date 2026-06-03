@@ -74,8 +74,11 @@ from ncs.forecast.contracts import FieldForecast
 class ForecastRun(BaseModel):
     """Typed summary of one forecasting run over the whole store (R5, R8). Returned and persisted."""
     model_config = ConfigDict(frozen=True, extra="forbid")
-    forecasts: list[FieldForecast]                 # one per field with ≥60 months (R1, R7)
+    forecasts: list[FieldForecast]                 # one per forecastable field (R1, R7)
     insufficient_history_npdids: list[int]         # fields with <60 months — no forecast (R5)
+    unforecastable_npdids: list[int] = []          # ≥60 months but BOTH approaches failed to fit — no
+                                                   # forecast, distinct from insufficient-history (R5-like;
+                                                   # raised as AllApproachesFailedError, collected here)
 ```
 
 - `run_forecasts` reads every field's history from DuckDB (§Input source), calls `Forecaster.forecast`
@@ -354,10 +357,12 @@ CREATE TABLE IF NOT EXISTS field_forecast_point (
   in principle return fewer/renumbered points, the developer **deletes the field's existing points then
   inserts the new 24** within that transaction (clean replace), keeping the points table consistent with
   the parent (flagged as an implementation note, not a contract change).
-- **`run_forecasts` also persists `ForecastRun`** (optional, parallel to 001's `ingestion_report`): a
-  `forecast_run` row per run recording `run_at`, forecast count, and `insufficient_history_npdids` as a
-  native `BIGINT[]` — so the R5 "insufficient-history" set is auditable from the store. Kept lightweight;
-  flagged as a nice-to-have the coordinator can drop if out of scope.
+- **`run_forecasts` also persists `ForecastRun`** (parallel to 001's `ingestion_report`): a
+  `forecast_run` row per run recording `run_at`, forecast count, and **both** `insufficient_history_npdids`
+  and `unforecastable_npdids` as native `BIGINT[]` — so the R5 "no forecast" sets are auditable from the
+  store. **Audit aid** — *not* uniquely EARS-required (R5/R8 are satisfied by the returned `ForecastRun`
+  plus `field_forecast`); retained in scope for store-side auditability (resolves the both-fail open
+  question: a degenerate ≥60-month field is reported, never given a fabricated forecast).
 - **Read-back round-trips the contract.** As in 001, the `field_forecast` columns equal the scalar
   `FieldForecast` fields (minus `points`, which live in the child table) so a persisted forecast
   reconstructs into the frozen model — the acceptance suite does that round-trip (R7/R8).
