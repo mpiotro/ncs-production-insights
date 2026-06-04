@@ -22,20 +22,23 @@ export default defineConfig({
       reporters: ["text", "lcov"],
       // Only measure src/ application logic — the ratchet (T11) tracks real code, not config.
       include: ["src/**/*.{ts,tsx}"],
-      // Generated schema, type-only contracts, and entrypoints carry no testable logic.
+      // Generated schema, type-only declarations, and entrypoints carry no testable logic.
       exclude: [
         "src/api/schema.gen.ts",
         "src/main.tsx",
+        "src/**/*.d.ts",
         "**/*.test.{ts,tsx}",
         "**/*.test-d.ts",
       ],
-      // NOTE: thresholds are 0 until the suite lands; the coordinator RATCHETS this to the
-      // landed frontend baseline in 004-T11 (principle 9 — separate from the Python ratchet).
+      // 004-T11 ratchet (principle 9, separate from the Python baseline). The suite landed at
+      // 100% statements/functions/lines and 96.45% branches; thresholds are set a couple of points
+      // below measured for headroom (mirroring the Python 0→92-under-95.7 precedent). CI fails any
+      // drop below these; a deliberate reduction needs a coordinator-recorded COVERAGE-WAIVER.
       thresholds: {
-        statements: 0,
-        branches: 0,
-        functions: 0,
-        lines: 0,
+        statements: 98,
+        branches: 94,
+        functions: 98,
+        lines: 98,
       },
     },
   },
