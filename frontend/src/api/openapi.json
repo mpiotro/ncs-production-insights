@@ -1,0 +1,709 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NCS Production Insights API",
+    "description": "Read-only API over the SODIR-derived DuckDB store: field list/detail, monthly production, 24-month forecasts, and fields as GeoJSON.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/fields": {
+      "get": {
+        "tags": [
+          "fields"
+        ],
+        "summary": "List Fields",
+        "description": "Return every persisted field with its descriptive attributes (003-R2).",
+        "operationId": "list_fields_fields_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fields/{npdid}": {
+      "get": {
+        "tags": [
+          "fields"
+        ],
+        "summary": "Get Field",
+        "description": "Return one field's frozen ``Field``; 404 + ``field_not_found`` if the NPDID is absent (003-R2, R6).",
+        "operationId": "get_field_fields__npdid__get",
+        "parameters": [
+          {
+            "name": "npdid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Npdid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Field"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fields/{npdid}/production": {
+      "get": {
+        "tags": [
+          "production"
+        ],
+        "summary": "Get Production",
+        "description": "Return a field's full monthly history, ordered (year, month), nulls preserved (003-R3, R6).",
+        "operationId": "get_production_fields__npdid__production_get",
+        "parameters": [
+          {
+            "name": "npdid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Npdid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionHistoryResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fields/{npdid}/forecast": {
+      "get": {
+        "tags": [
+          "forecast"
+        ],
+        "summary": "Get Forecast",
+        "description": "Return the field's ``FieldForecast``; 404 distinguishes no-forecast from no-field (003-R4, R6).",
+        "operationId": "get_forecast_fields__npdid__forecast_get",
+        "parameters": [
+          {
+            "name": "npdid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Npdid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldForecast"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fields.geojson": {
+      "get": {
+        "tags": [
+          "geojson"
+        ],
+        "summary": "Fields Geojson",
+        "description": "Return the fields as a GeoJSON FeatureCollection; null-outline fields kept as null geometry (003-R5).",
+        "operationId": "fields_geojson_fields_geojson_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldFeatureCollection"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "field_not_found",
+          "forecast_not_available"
+        ],
+        "title": "ErrorCode",
+        "description": "Machine-readable reason on an error response \u2014 lets 004 branch without parsing prose."
+      },
+      "ErrorResponse": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "detail"
+        ],
+        "title": "ErrorResponse",
+        "description": "Typed error body returned with every 4xx (003-R6, and the R4 insufficient-history 404)."
+      },
+      "Field": {
+        "properties": {
+          "field_npdid": {
+            "type": "integer",
+            "title": "Field Npdid"
+          },
+          "field_name": {
+            "type": "string",
+            "title": "Field Name"
+          },
+          "current_activity_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Activity Status"
+          },
+          "hc_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hc Type"
+          },
+          "main_area": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Main Area"
+          },
+          "operator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operator"
+          },
+          "discovery_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discovery Year"
+          },
+          "geometry_wkt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geometry Wkt"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field_npdid",
+          "field_name"
+        ],
+        "title": "Field",
+        "description": "A single NCS field: identity, descriptive attributes, outline geometry as WKT (R5, R7)."
+      },
+      "FieldFeature": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "Feature",
+            "title": "Type",
+            "default": "Feature"
+          },
+          "geometry": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geometry"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/FieldProperties"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "geometry",
+          "properties"
+        ],
+        "title": "FieldFeature",
+        "description": "One GeoJSON Feature: a field's outline (or null) + its identity (003-R5)."
+      },
+      "FieldFeatureCollection": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "FeatureCollection",
+            "title": "Type",
+            "default": "FeatureCollection"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/FieldFeature"
+            },
+            "type": "array",
+            "title": "Features"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "features"
+        ],
+        "title": "FieldFeatureCollection",
+        "description": "The fields as a GeoJSON FeatureCollection (003-R5) \u2014 the Leaflet map source for 004."
+      },
+      "FieldForecast": {
+        "properties": {
+          "field_npdid": {
+            "type": "integer",
+            "title": "Field Npdid"
+          },
+          "target": {
+            "$ref": "#/components/schemas/ForecastTarget",
+            "default": "oil_equivalents"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ForecastPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          },
+          "method": {
+            "$ref": "#/components/schemas/ForecastMethod"
+          },
+          "backtest_mape": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Backtest Mape"
+          },
+          "credible": {
+            "type": "boolean",
+            "title": "Credible"
+          },
+          "history_months": {
+            "type": "integer",
+            "minimum": 60.0,
+            "title": "History Months"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field_npdid",
+          "points",
+          "method",
+          "backtest_mape",
+          "credible",
+          "history_months"
+        ],
+        "title": "FieldForecast",
+        "description": "A field's 24-month oil-equivalents forecast: selection, backtest, credibility (R1\u2013R4, R7)."
+      },
+      "FieldListResponse": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/Field"
+            },
+            "type": "array",
+            "title": "Fields"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "count",
+          "fields"
+        ],
+        "title": "FieldListResponse",
+        "description": "The field list (003-R2) \u2014 every persisted Field with its descriptive attributes."
+      },
+      "FieldProperties": {
+        "properties": {
+          "field_npdid": {
+            "type": "integer",
+            "title": "Field Npdid"
+          },
+          "field_name": {
+            "type": "string",
+            "title": "Field Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field_npdid",
+          "field_name"
+        ],
+        "title": "FieldProperties",
+        "description": "A GeoJSON feature's properties for a field (003-R5) \u2014 identity only, for the map layer."
+      },
+      "ForecastMethod": {
+        "type": "string",
+        "enum": [
+          "arps_decline",
+          "holt_damped"
+        ],
+        "title": "ForecastMethod",
+        "description": "Which approach produced a forecast \u2014 the selected one is recorded on FieldForecast (R2)."
+      },
+      "ForecastPoint": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "month": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Month"
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "year",
+          "month",
+          "value"
+        ],
+        "title": "ForecastPoint",
+        "description": "One forecasted oil-equivalents value for one calendar month (R1)."
+      },
+      "ForecastTarget": {
+        "type": "string",
+        "enum": [
+          "oil_equivalents"
+        ],
+        "title": "ForecastTarget",
+        "description": "The forecast quantity. Fixed to oil-equivalents this cycle (spec \u00a7Scope; R1)."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MonthlyProduction": {
+        "properties": {
+          "field_npdid": {
+            "type": "integer",
+            "title": "Field Npdid"
+          },
+          "field_name": {
+            "type": "string",
+            "title": "Field Name"
+          },
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "month": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Month"
+          },
+          "oil": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oil"
+          },
+          "gas": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gas"
+          },
+          "ngl": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ngl"
+          },
+          "condensate": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condensate"
+          },
+          "oil_equivalents": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oil Equivalents"
+          },
+          "produced_water": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Produced Water"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field_npdid",
+          "field_name",
+          "year",
+          "month"
+        ],
+        "title": "MonthlyProduction",
+        "description": "A single field-month production row, normalized from SODIR field_production_monthly (R4, R6)."
+      },
+      "ProductionHistoryResponse": {
+        "properties": {
+          "field_npdid": {
+            "type": "integer",
+            "title": "Field Npdid"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "production": {
+            "items": {
+              "$ref": "#/components/schemas/MonthlyProduction"
+            },
+            "type": "array",
+            "title": "Production"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field_npdid",
+          "count",
+          "production"
+        ],
+        "title": "ProductionHistoryResponse",
+        "description": "A field's full monthly-production history (003-R3), ordered (year, month), nulls preserved."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
