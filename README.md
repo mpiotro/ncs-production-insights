@@ -27,6 +27,18 @@ cd frontend && npm ci && npm run coverage   # frontend suite with coverage
 Three layers off the frozen data contract: **ingestion + forecasting** build a DuckDB store, the
 **API** serves it read-only, and the **dashboard** displays it.
 
+### Quickest — one command (Windows PowerShell)
+
+```powershell
+./scripts/start-local.ps1
+```
+
+Seeds a synthetic, forecast-bearing **demo** store (no network), starts the API + dashboard, and serves
+the dashboard at <http://localhost:5173>; press Ctrl+C to stop both. Useful flags: `-Mock` (run the
+dashboard alone against its built-in mock — no backend), `-Reseed` (rebuild the demo store), and
+`-DbPath <file>` (serve a store you built from **real** SODIR data — see step 1). The manual,
+cross-platform steps below do the same thing by hand.
+
 **Prerequisites:** Python 3.12+ with `uv` (backend) and Node 20+ with npm (frontend). Install once with
 `uv sync` and `cd frontend && npm ci`.
 
