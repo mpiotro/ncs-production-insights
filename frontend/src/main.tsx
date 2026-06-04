@@ -6,6 +6,9 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
+import "leaflet/dist/leaflet.css"; // Leaflet's own CSS — without it map tiles scramble (R1)
+import "./index.css"; // app layout incl. the map container height Leaflet needs
+
 import App from "./App";
 import { selectClient } from "./api/selectClient";
 import { readConfig } from "./config";
