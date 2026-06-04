@@ -81,7 +81,11 @@ if (-not (Test-Path (Join-Path $RepoRoot "frontend/node_modules"))) {
 }
 
 $procs = [System.Collections.Generic.List[object]]::new()
-$ApiBase = "http://localhost:$ApiPort"
+# 127.0.0.1, not "localhost": uvicorn binds IPv4 only (--host 127.0.0.1), but on Windows
+# "localhost" resolves to ::1 (IPv6) first, so a localhost health probe times out and never
+# reaches the server. Using the literal IPv4 address keeps the health gate and the dashboard's
+# API calls pointed at the address uvicorn is actually listening on.
+$ApiBase = "http://127.0.0.1:$ApiPort"
 
 try {
     if (-not $Mock) {
@@ -126,8 +130,11 @@ try {
     }
     Push-Location (Join-Path $RepoRoot "frontend")
     try {
-        $web = Start-Process -FilePath $npm -PassThru -NoNewWindow -ArgumentList @(
-            "run", "dev", "--", "--port", "$WebPort", "--strictPort"
+        # npm is a .cmd shim on Windows; Start-Process can't track it directly (the shim exits
+        # immediately, tripping the liveness check below). Launch it via cmd.exe, which stays
+        # alive as the parent of the long-running node/vite child.
+        $web = Start-Process -FilePath "$env:ComSpec" -PassThru -NoNewWindow -ArgumentList @(
+            "/c", "`"$npm`"", "run", "dev", "--", "--port", "$WebPort", "--strictPort"
         )
     }
     finally { Pop-Location }
