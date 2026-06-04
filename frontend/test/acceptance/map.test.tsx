@@ -85,8 +85,11 @@ describe("004-R1 — NCS fields on a Leaflet map (GeoJSON polygons, free tiles, 
     await userEvent.click(snorre!);
 
     // Selecting the field drives the detail panel to fetch + show that field (the map⇄chart join
-    // key is field_npdid). SNORRE's name becoming visible in the detail is the user-visible proof.
-    expect(await screen.findByText(/SNORRE/i)).toBeInTheDocument();
+    // key is field_npdid). The proof is SCOPED to the detail region: the selected field's name
+    // appearing as the detail heading — not the always-present map polygon button — is what the
+    // selection adds (the demo's visible surface).
+    const detail = screen.getByLabelText("Field detail");
+    expect(await within(detail).findByRole("heading", { name: /SNORRE/i })).toBeInTheDocument();
     await vi.waitFor(() =>
       expect(client.getProduction).toHaveBeenCalledWith(NPDID_CREDIBLE),
     );
@@ -111,9 +114,12 @@ describe("004-R1 — NCS fields on a Leaflet map (GeoJSON polygons, free tiles, 
     await vi.waitFor(() =>
       expect(client.getProduction).toHaveBeenCalledWith(NPDID_NULL_GEOMETRY),
     );
-    // And its detail renders, proving selection succeeded for a null-geometry field.
+    // And its detail renders, proving selection succeeded for a null-geometry field. Scope the
+    // name assertion to the detail region (the selected field surfaces there as the heading), so
+    // it proves selection populated the detail — not just the list button that was always present.
+    const detail = screen.getByLabelText("Field detail");
     const charts = await screen.findAllByTestId("plotly-chart");
     expect(charts.length).toBeGreaterThanOrEqual(1);
-    expect(within(document.body).getAllByText(/NULLGEOM/i).length).toBeGreaterThanOrEqual(1);
+    expect(await within(detail).findByRole("heading", { name: /NULLGEOM/i })).toBeInTheDocument();
   });
 });

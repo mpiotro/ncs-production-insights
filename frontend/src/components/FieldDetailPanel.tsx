@@ -10,9 +10,9 @@
  * The history chart is rendered whenever production loaded — so a selected field is never blank, and
  * the no-forecast field still shows its real history with NO fabricated curve (R4).
  *
- * Header note: the field NAME is the selected control in the map/list (highlighted there); the detail
- * header identifies the field by NPDID + descriptive attributes rather than repeating the name, so a
- * single selection control owns each field's name in the DOM (keeps the map⇄detail query unambiguous).
+ * Header: the selected field's NAME is the detail heading (the demo's visible surface — 004-R2), with
+ * NPDID + operator/area/status as the sub-line. The name also labels the map polygon / list control;
+ * the acceptance "selected field" assertion is scoped to this detail region so it stays unambiguous.
  */
 import type { Field, NcsApiClient } from "../api/contracts";
 import { useFieldData } from "../hooks/useFieldData";
@@ -45,9 +45,9 @@ export function FieldDetailPanel({ client, field }: FieldDetailPanelProps) {
   return (
     <section className="field-detail" aria-label="Field detail">
       <header className="field-detail__header">
-        <h2 className="field-detail__title">Selected field — NPDID {field.field_npdid}</h2>
+        <h2 className="field-detail__title">{field.field_name}</h2>
         <p className="field-detail__meta">
-          {[field.operator, field.main_area, field.current_activity_status]
+          {[`NPDID ${field.field_npdid}`, field.operator, field.main_area, field.current_activity_status]
             .filter((attr): attr is string => Boolean(attr))
             .join(" · ")}
         </p>
