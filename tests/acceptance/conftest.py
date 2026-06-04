@@ -183,8 +183,11 @@ def seed_monthly_production() -> SeedMonthlyProduction:
 
 
 # ============================================================ 003 addendum (additive) =============
-# Register the 003 API acceptance fixtures (seeded store + TestClient seam) as a pytest plugin. The
-# fixtures themselves live in ``conftest_api.py`` so a missing ``ncs.api`` / ``fastapi`` import (the
-# intended TDD red until 003-T1/T7..T9) only fails the API suites, never 001/002 collection. This is
-# the single additive line wiring the 003 fixtures in — no 001/002 fixture above is altered.
-pytest_plugins = ["conftest_api"]
+# Surface the 003 API acceptance fixtures (seeded store + TestClient seam) — defined in
+# ``conftest_api.py`` — by importing them into this package conftest's namespace, so pytest registers
+# them as conftest fixtures. (``pytest_plugins`` is deliberately NOT used: pytest 9 forbids it in a
+# non-top-level conftest, which breaks a bare ``pytest`` from the repo root — i.e. CI. A plain
+# star-import registers the same fixtures and is rootdir-agnostic.) ``conftest_api``'s own
+# ``ncs.api`` / ``fastapi`` imports are lazy, so this import stays clean until those exist — no 001/002
+# fixture above is altered.
+from conftest_api import *  # noqa: E402, F401, F403  (intentional fixture re-export)
