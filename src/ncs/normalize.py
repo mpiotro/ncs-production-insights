@@ -60,14 +60,22 @@ def _to_float_or_none(value: object) -> float | None:
     ``.``; surrounding whitespace is trimmed). A real ``0`` / ``0.0`` parses to ``0.0`` and is kept
     — distinct from the ``None`` an absent cell produces. A non-numeric present value raises
     ``ValueError`` (surfaced, never silently dropped).
+
+    **Negative → floored to ``0.0``.** SODIR occasionally publishes a slightly negative *net* monthly
+    volume (net = produced minus reinjected / reclassified — an accounting artifact; ~0.75% of real
+    rows, magnitudes ≤ ~0.1). The frozen contract floors every stream at 0 (R6, ``ge=0``), so a
+    negative cell is clamped to ``0.0`` here rather than aborting the whole ingest on one row. ``0.0``
+    (a present value) stays distinct from ``None`` (an absent one).
     """
     if _is_absent(value):
         return None
     if isinstance(value, bool):  # guard: bool is an int subclass; treat as malformed, not 0/1
         raise ValueError(f"expected a numeric volume, got bool {value!r}")
     if isinstance(value, (int, float)):
-        return float(value)
-    return float(str(value).strip())
+        parsed = float(value)
+    else:
+        parsed = float(str(value).strip())
+    return parsed if parsed >= 0.0 else 0.0
 
 
 def _to_int(value: object) -> int:

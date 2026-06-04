@@ -28,6 +28,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
+from shapely.errors import ShapelyError
+from shapely.geometry import shape as _geojson_to_shape
 
 from ncs.config import Source
 from ncs.contracts import Dataset, SourceRef, Transport
@@ -99,13 +101,45 @@ def _parse_csv(payload: bytes) -> list[dict[str, str | None]]:
     return [dict(row) for row in reader]
 
 
-def _parse_rest(payload: bytes) -> list[dict[str, object]]:
-    """Parse a layer-7100 REST JSON payload (``features[].attributes``) into raw column dicts.
+def _geometry_to_wkt(geometry: object) -> str | None:
+    """Convert a REST feature's geometry to a WKT string, or ``None`` when there is none.
 
-    Each feature's ``attributes`` object already carries the SODIR ``fld*`` columns and the outline
-    as a ``geometry_wkt`` string (the fixture README's documented hermetic assumption), so the
-    attributes dict *is* the raw column dict. Malformed JSON or a missing/empty ``features`` array
-    yields zero rows → the caller falls back.
+    Handles the **GeoJSON** geometry the live FactMaps service returns with ``f=geojson`` (a
+    ``{"type", "coordinates"}`` object) by passing it through shapely (``shape(...).wkt``). The
+    hermetic fixtures instead carry the outline as a ready ``geometry_wkt`` *attribute* (consumed in
+    ``_parse_rest``), so this is the live-service path the fixtures never exercised. A missing /
+    null / empty / unreadable geometry returns ``None`` — SODIR publishes no outline (R7's null
+    case); the contract validator still rejects a non-polygonal WKT at construction.
+    """
+    if not isinstance(geometry, dict):
+        return None
+    if "type" not in geometry or "coordinates" not in geometry:
+        return None
+    try:
+        geom = _geojson_to_shape(geometry)
+    except (ShapelyError, ValueError, TypeError, KeyError):
+        return None
+    if geom.is_empty:
+        return None
+    return geom.wkt
+
+
+def _parse_rest(payload: bytes) -> list[dict[str, object]]:
+    """Parse a field REST JSON payload into raw column dicts — ArcGIS *or* GeoJSON shape.
+
+    Two feature shapes are accepted, so one handler serves both the hermetic fixture and the live
+    FactMaps service:
+
+    * **ArcGIS** ``features[].attributes`` — the fixture's shape; the attributes object already
+      carries the ``fld*`` columns *and* a ready ``geometry_wkt`` string (fixture README), so the
+      attributes dict is the raw column dict as-is.
+    * **GeoJSON** ``features[].properties`` + ``features[].geometry`` — what live FactMaps layer 502
+      returns with ``f=geojson``; the properties are the columns and the geometry is converted to
+      ``geometry_wkt`` via :func:`_geometry_to_wkt` (shapely).
+
+    If the columns don't already carry ``geometry_wkt``, it is derived from the feature geometry when
+    present. Malformed JSON or a missing/empty ``features`` array yields zero rows → the caller falls
+    back.
     """
     try:
         document = json.loads(payload.decode("utf-8-sig"))
@@ -118,8 +152,21 @@ def _parse_rest(payload: bytes) -> list[dict[str, object]]:
         return []
     rows: list[dict[str, object]] = []
     for feature in features:
-        if isinstance(feature, dict) and isinstance(feature.get("attributes"), dict):
-            rows.append(dict(feature["attributes"]))
+        if not isinstance(feature, dict):
+            continue
+        columns = feature.get("attributes")
+        if not isinstance(columns, dict):
+            columns = feature.get("properties")
+        if not isinstance(columns, dict):
+            continue
+        row = dict(columns)
+        # Live GeoJSON path: derive the outline WKT from the feature geometry when the columns
+        # don't already carry it (the ArcGIS fixture's attributes already include ``geometry_wkt``).
+        if not row.get("geometry_wkt"):
+            wkt = _geometry_to_wkt(feature.get("geometry"))
+            if wkt is not None:
+                row["geometry_wkt"] = wkt
+        rows.append(row)
     return rows
 
 

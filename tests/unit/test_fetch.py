@@ -19,6 +19,7 @@ from ncs.config import Source
 from ncs.contracts import Dataset, Transport
 from ncs.fetch import (
     FetchError,
+    _geometry_to_wkt,
     _load_bytes,
     _looks_like_http,
     _parse_csv,
@@ -112,6 +113,68 @@ def test_parse_rest_reads_feature_attributes_with_wkt() -> None:
 def test_parse_rest_malformed_or_empty_yields_no_rows(bad: bytes) -> None:
     """Malformed JSON or a missing/empty features array yields zero rows (→ fallback)."""
     assert _parse_rest(bad) == []
+
+
+# --- REST: live GeoJSON shape (FactMaps f=geojson) + geometry → WKT ------------------------------
+
+_FIELD_GEOJSON = """
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "fldNpdidField": 2001,
+        "fldName": "LIVEFIELD",
+        "fldCurrentActivitySatus": "Producing"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[2.0, 60.0], [2.5, 60.0], [2.5, 60.5], [2.0, 60.5], [2.0, 60.0]]]
+      }
+    }
+  ]
+}
+"""
+
+
+def test_parse_rest_reads_geojson_properties_and_derives_wkt() -> None:
+    """REST also handles a GeoJSON FeatureCollection (live FactMaps ``f=geojson``): ``properties``
+    are the columns and the GeoJSON ``geometry`` is converted to a ``geometry_wkt`` string."""
+    rows = _parse_rest(_FIELD_GEOJSON.encode("utf-8"))
+    assert len(rows) == 1
+    assert rows[0]["fldNpdidField"] == 2001
+    assert rows[0]["fldName"] == "LIVEFIELD"
+    assert rows[0]["geometry_wkt"].startswith("POLYGON")
+
+
+def test_parse_rest_geojson_null_geometry_leaves_geometry_absent() -> None:
+    """A GeoJSON feature with ``geometry: null`` (SODIR publishes no outline) gets no derived WKT."""
+    doc = (
+        '{"type":"FeatureCollection","features":[{"type":"Feature",'
+        '"properties":{"fldNpdidField":3001,"fldName":"NOGEO"},"geometry":null}]}'
+    )
+    rows = _parse_rest(doc.encode("utf-8"))
+    assert len(rows) == 1
+    assert rows[0].get("geometry_wkt") is None
+
+
+def test_geometry_to_wkt_converts_geojson_polygon_and_multipolygon() -> None:
+    """A GeoJSON Polygon/MultiPolygon geometry round-trips to the matching WKT (via shapely)."""
+    poly = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]}
+    assert _geometry_to_wkt(poly).startswith("POLYGON")
+    multi = {"type": "MultiPolygon",
+             "coordinates": [[[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]]}
+    assert _geometry_to_wkt(multi).startswith("MULTIPOLYGON")
+
+
+@pytest.mark.parametrize(
+    "geom",
+    [None, {}, {"type": "Polygon"}, {"coordinates": []}, {"rings": [[[0, 0]]]}, "x", 5],
+)
+def test_geometry_to_wkt_none_for_missing_or_unsupported(geom: object) -> None:
+    """Missing / null / non-GeoJSON (e.g. raw Esri ``rings``) geometry → ``None`` (null outline)."""
+    assert _geometry_to_wkt(geom) is None
 
 
 # --- fetch_dataset: ordering & fallback (the R3 heart) -------------------------------------------
