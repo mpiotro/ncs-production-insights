@@ -1,0 +1,212 @@
+/*
+ * 004 dashboard styles. The load-bearing rule is the Leaflet container height: react-leaflet's
+ * MapContainer is `height: 100%`, so `.app__map` MUST resolve to a real height or the map collapses
+ * and tiles scramble (that, plus importing `leaflet/dist/leaflet.css` in main.tsx, is what makes the
+ * map render). The rest is a clean two-pane demo layout: a fixed sidebar (map + null-geometry field
+ * list) beside the detail panel (chart + credibility).
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #16202b;
+  background: #f5f7fa;
+}
+
+.app__header {
+  background: #0b3d63;
+  color: #fff;
+  padding: 0.7rem 1.25rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  flex: none;
+}
+
+.app__header h1 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.app__main {
+  flex: 1;
+  display: flex;
+  min-height: 0; /* let the panes own their own scroll */
+}
+
+.app__sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 360px;
+  min-width: 300px;
+  background: #fff;
+  border-right: 1px solid #dce3ea;
+}
+
+/* The map fills the sidebar above the list; min-height is the safety net so Leaflet is never 0px. */
+.app__map {
+  flex: 1;
+  min-height: 360px;
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+}
+
+.app__field-list {
+  flex: none;
+  border-top: 1px solid #dce3ea;
+  padding: 0.6rem 0.9rem;
+  overflow: auto;
+  max-height: 40%;
+}
+
+.app__field-list-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #5b6b7b;
+}
+
+.app__field-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.app__field-list-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  margin-bottom: 0.25rem;
+  border: 1px solid #d2dbe4;
+  border-radius: 6px;
+  background: #f8fafc;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.app__field-list-item:hover {
+  background: #eef3f8;
+}
+
+.app__field-list-item[aria-pressed="true"] {
+  background: #0b3d63;
+  color: #fff;
+  border-color: #0b3d63;
+}
+
+.field-detail {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  overflow: auto;
+}
+
+.field-detail--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5b6b7b;
+  font-size: 1.05rem;
+}
+
+.field-detail__header {
+  margin-bottom: 0.5rem;
+}
+
+.field-detail__title {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #0b3d63;
+}
+
+.field-detail__meta {
+  margin: 0.15rem 0 0;
+  color: #5b6b7b;
+  font-size: 0.85rem;
+}
+
+.field-detail__status {
+  color: #5b6b7b;
+}
+
+.field-detail__status--error {
+  color: #b3261e;
+}
+
+/* Credibility badge: neutral by default; green when credible, amber when low-confidence (R3). */
+.forecast-badge {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  background: #f0f4f8;
+}
+
+.forecast-badge__mape {
+  font-weight: 600;
+}
+
+.forecast-badge__indicator {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+  background: #6b7785;
+}
+
+.forecast-badge[data-credible="true"] .forecast-badge__indicator {
+  background: #1c7c45;
+}
+
+.forecast-badge[data-credible="false"] .forecast-badge__indicator {
+  background: #c77700;
+}
+
+.forecast-badge__method {
+  color: #5b6b7b;
+  font-size: 0.82rem;
+}
+
+/* No-credible-forecast notice (R4) — clearly distinct from a real forecast, never blank. */
+.no-forecast-notice {
+  margin-top: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border-left: 4px solid #c77700;
+  background: #fff7e6;
+  border-radius: 4px;
+}
+
+.no-forecast-notice__headline {
+  margin: 0;
+  font-weight: 600;
+  color: #8a5200;
+}
+
+.no-forecast-notice__detail {
+  margin: 0.3rem 0 0;
+  color: #5b6b7b;
+  font-size: 0.85rem;
+}
