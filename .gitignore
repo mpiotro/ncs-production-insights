@@ -231,3 +231,10 @@ dist-ssr/
 *.local
 .vite/
 .DS_Store
+# Vitest / V8 coverage output (frontend/coverage/) — committed source is package-lock.json
+# + the openapi.json snapshot, never build/coverage artifacts (plan §1, 004-R6).
+coverage/
+# Local env overrides (the committed file is .env.example only; no secrets, principle 7).
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
