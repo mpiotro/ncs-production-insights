@@ -67,6 +67,10 @@ function Stop-OnPort([int]$Port) {
     }
 }
 
+function Test-Listening([int]$Port) {
+    [bool](Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
+}
+
 Write-Host "==> Checking prerequisites..."
 $uv  = Resolve-Tool uv  "Install uv: https://docs.astral.sh/uv/"
 $npm = Resolve-Tool npm "Install Node 20+ (bundles npm): https://nodejs.org/"
@@ -130,15 +134,28 @@ try {
     }
     Push-Location (Join-Path $RepoRoot "frontend")
     try {
-        # npm is a .cmd shim on Windows; Start-Process can't track it directly (the shim exits
-        # immediately, tripping the liveness check below). Launch it via cmd.exe, which stays
-        # alive as the parent of the long-running node/vite child.
+        # npm is a .cmd shim on Windows; launch it via cmd.exe so we hold a handle whose process
+        # tree (cmd -> npm -> node/vite) taskkill /T can tear down cleanly on exit.
         $web = Start-Process -FilePath "$env:ComSpec" -PassThru -NoNewWindow -ArgumentList @(
             "/c", "`"$npm`"", "run", "dev", "--", "--port", "$WebPort", "--strictPort"
         )
     }
     finally { Pop-Location }
     $procs.Add($web)
+
+    Write-Host "    waiting for the dashboard to come up..."
+    $webUp = $false
+    for ($i = 0; $i -lt 60; $i++) {
+        if (Test-Listening $WebPort) { $webUp = $true; break }
+        Start-Sleep -Milliseconds 500
+    }
+    if (-not $webUp) { throw "Dashboard did not start listening on port $WebPort (see output above)." }
+
+    # Watch the listening ports, not the launcher process handles: on Windows the Start-Process
+    # handles point at .cmd/uv shims that can report exited while the real node/uvicorn child keeps
+    # serving, so HasExited spuriously tripped teardown. A dropped port is the true "server died".
+    $watchPorts = @($WebPort)
+    if (-not $Mock) { $watchPorts += $ApiPort }
 
     Write-Host ""
     Write-Host "  NCS Production Insights is running:" -ForegroundColor Green
@@ -147,11 +164,13 @@ try {
     Write-Host ""
     Write-Host "  Press Ctrl+C to stop."
 
-    # Block until interrupted; bail out early if either server dies on its own.
+    # Block until interrupted; bail out early if a server stops listening.
     while ($true) {
-        Start-Sleep -Seconds 1
-        foreach ($p in $procs) {
-            if ($p.HasExited) { throw "A server process exited unexpectedly (see output above)." }
+        Start-Sleep -Seconds 2
+        foreach ($port in $watchPorts) {
+            if (-not (Test-Listening $port)) {
+                throw "Nothing is listening on port $port anymore - a server stopped (see output above)."
+            }
         }
     }
 }
